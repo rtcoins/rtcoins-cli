@@ -1,0 +1,17 @@
+{
+  "name": "rtcoins-utils",
+  "version": "0.0.1",
+  "description": "rtcoins.com command line API client",
+  "bin": {
+    "rtcoins": "./bin/rtcoins"
+  },
+  "dependencies" : {
+    "laeh2": "*",
+    "async-mini": "*",
+    "underscore": "*",
+    "utilz": "*",
+    "clone": "*",
+    "request": "*",
+    "commander": "*"
+  }
+}
