@@ -12,13 +12,14 @@ var fs = require('fs');
 var cb = utilz.cb;
 var dev = process.env.NODE_ENV === 'dev';
 var baseUrl = 'http://www.rtcoins' + (dev ? '2' : '') + '.com/api/v1/';
+var anonEmail = 'anonymous@rtcoins.com';
 var anonApiKey = 'ywUiwpKjsKvsqDut1NXmgL00nBJW51wt';
 var verbose;
 var conf;
 
 function req(cmd) { // cmd, arg1, arg2, argN, cb(err, res)
 
-    // www.rtcoins.com/api/v1/func/arg1/arg2/argN
+    // www.rtcoins.com/api/v1/func/arg1/arg2/argN/identity/ts/sig
 
     var args = {};
     var url = [];
@@ -27,9 +28,12 @@ function req(cmd) { // cmd, arg1, arg2, argN, cb(err, res)
 
     for(var i = 0, ln = aa.length - 1; i < ln; i++) {
         var v = aa[i];
-        args[v] = i;
+        args[String(i)] = v;
         url.push(encodeURIComponent(v));
     }
+
+    args[String(i++)] = conf.email;
+    url.push(encodeURIComponent(conf.email));
 
     var sig = utilz.sign(args, conf.key, true);
     url.push(args.ts);
@@ -45,13 +49,15 @@ function req(cmd) { // cmd, arg1, arg2, argN, cb(err, res)
 
     request(opts, _x(cb, true, function(err, res, json) {
         if(res.statusCode !== 200)
-            _e('invalid response status code: [%s] [%s]', res.statusCode, json);
+            _e('invalid response status code: [%s] [%j]', res.statusCode, json);
 
         if(cmd === 'login' && json.apikey) {
+            conf.email = json.email;
             conf.key = json.apikey;
             saveConf();
         }
         else if(cmd === 'logout') {
+            conf.email = anonEmail;
             conf.key = anonApiKey;
             saveConf();
         }
@@ -71,6 +77,7 @@ function loadConf() {
         if(verbose)
             console.log('.config does not exist, will create one');
         conf = {
+            email: anonEmail,
             key: anonApiKey
         };
     }
@@ -88,16 +95,13 @@ exports.cmdline = function() {
         .option('--verbose', 'print more info')
 
         .option('--register <email> <pass> <fname> <lname>', 'register a new user account')
-        .option('--delete-account <email>', 'delete user account')
+        .option('--delete-account [email]', 'delete user account')
 
-        .option('--block-account <email>', 'block the user account (admin)')
-        .option('--unblock-account <email>', 'unblock the user account (admin)')
-
-        .option('--login <email> <pass> [authy]', 'user login; writes api key into .config')
-        .option('--logout', 'user logout; removes api key from .config')
+        .option('--login <email> <pass> [authy]', 'user login; writes email and api key into .config')
+        .option('--logout', 'user logout; removes email and api key from .config')
 
         .option('--init-pass-reset <email>', 'initiate password reset')
-        .option('--finish-pass-reset <code> <password>', 'finish password reset')
+        .option('--finish-pass-reset <email> <code> <new password>', 'finish password reset')
 
         .option('--sell <market> <amount>', 'place sell order')
         .option('--buy <market> <amount>', 'place buy order')
@@ -111,7 +115,7 @@ exports.cmdline = function() {
 
         .option('--chart [market]', 'list candlestick chart data for a market')
 
-        .option('--transfer <email-from> <email-to> <currency-code> <amount>', 'transfer coins between two users')
+        .option('--transfer <email-to> <currency-code> <amount>', 'transfer coins to another user')
 
         .option('--balances', 'list my balances')
         .option('--my-markets', 'list the markets i am active in')
@@ -121,6 +125,9 @@ exports.cmdline = function() {
 
         .option('--consolidate <email> <currency>', 'initiate consolidation transfer from user wallet to currency wallet (admin)')
         .option('--simulate-deposit <email> <currency> <amount> <source-address>', 'simulate a deposit (admin)')
+
+        .option('--block-account <email>', 'block the user account (admin)')
+        .option('--unblock-account <email>', 'unblock the user account (admin)')
 
         .parse(process.argv);
 
@@ -137,7 +144,7 @@ exports.cmdline = function() {
         req('register', email, pass, fname, lname, cb);
     }
     else if(program.deleteAccount) {
-        var email = program.deleteAccount;
+        var email = typeof(program.deleteAccount) === 'string' ? program.deleteAccount : conf.email;
         req('delete-account', email, cb);
     }
     else if(program.blockAccount) {
@@ -164,7 +171,8 @@ exports.cmdline = function() {
     else if(program.finishPassReset) {
         var email = program.finishPassReset;
         var code = aa[0];
-        req('confirm-password', code, cb);
+        var pass = aa[1];
+        req('confirm-password', email, code, pass, cb);
     }
     else if(program.sell) {
         var market = program.sell;
@@ -204,11 +212,10 @@ exports.cmdline = function() {
         req('chart', market, cb);
     }
     else if(program.transfer) {
-        var emailFrom = program.transfer;
-        var emailTo = aa[0];
-        var currency = aa[1];
-        var amount = Number(aa[2]);
-        req('transfer', emailFrom, emailTo, currency, amount, cb);
+        var emailTo = program.transfer;
+        var currency = aa[0];
+        var amount = Number(aa[1]);
+        req('transfer', emailTo, currency, amount, cb);
     }
     else if(program.balances) {
         req('balances', cb);
@@ -242,4 +249,3 @@ exports.cmdline = function() {
 
 if(require.main === module)
     exports.cmdline();
-
