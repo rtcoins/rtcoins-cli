@@ -9,11 +9,14 @@ var _ = require('underscore');
 var program = require('commander');
 var utilz = require('utilz');
 var fs = require('fs');
+var path = require('path');
 var cb = utilz.cb;
 var dev = process.env.NODE_ENV === 'dev';
 var baseUrl = 'http://www.rtcoins' + (dev ? '2' : '') + '.com/api/v1/';
 var anonEmail = 'anonymous@rtcoins.com';
 var anonApiKey = 'ywUiwpKjsKvsqDut1NXmgL00nBJW51wt';
+var home = process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
+var config = path.join(home, '.rtcoins.json');
 var verbose;
 var conf;
 
@@ -29,7 +32,7 @@ function req(cmd) { // cmd, arg1, arg2, argN, cb(err, res)
     for(var i = 0, ln = aa.length - 1; i < ln; i++) {
         var v = aa[i];
         args[String(i)] = v;
-        url.push(encodeURIComponent(v));
+        url.push(encodeURIComponent(v === null ? '\0' : v));
     }
 
     args[String(i++)] = conf.email;
@@ -48,6 +51,12 @@ function req(cmd) { // cmd, arg1, arg2, argN, cb(err, res)
         console.log('request: %s', opts.url);
 
     request(opts, _x(cb, true, function(err, res, json) {
+
+        if(res.statusCode === 500 && json && json.error && json.error.message && !verbose) {
+            console.log(json.error.message);
+            process.exit(1);
+        }
+
         if(res.statusCode !== 200)
             _e('invalid response status code: [%s] [%j]', res.statusCode, json);
 
@@ -68,31 +77,36 @@ function req(cmd) { // cmd, arg1, arg2, argN, cb(err, res)
 }
 
 function loadConf() {
-    if(fs.existsSync('.config')) {
+    if(fs.existsSync(config)) {
         if(verbose)
-            console.log('loading .config');
-        conf = JSON.parse(fs.readFileSync('.config', 'utf8'));
+            console.log('loading %s', config);
+        conf = JSON.parse(fs.readFileSync(config, 'utf8'));
     }
     else {
         if(verbose)
-            console.log('.config does not exist, will create one');
+            console.log('%s does not exist, creating one', config);
         conf = {
             email: anonEmail,
             key: anonApiKey
         };
+        saveConf();
     }
 }
 
 function saveConf() {
     if(verbose)
-        console.log('saving .config');
-    fs.writeFileSync('.config', JSON.stringify(conf, null, '  '));
+        console.log('saving %s', config);
+    fs.writeFileSync(config, JSON.stringify(conf, null, '  '));
+}
+
+function opt(param) {
+    return param === true ? null : param;
 }
 
 exports.cmdline = function() {
 
     program
-        .option('--verbose', 'print more info')
+        .option('-v, --verbose', 'print more info')
 
         .option('--register <email> <pass> <fname> <lname>', 'register a new user account')
         .option('--delete-account [email]', 'delete user account')
@@ -144,8 +158,8 @@ exports.cmdline = function() {
         req('register', email, pass, fname, lname, cb);
     }
     else if(program.deleteAccount) {
-        var email = typeof(program.deleteAccount) === 'string' ? program.deleteAccount : conf.email;
-        req('delete-account', email, cb);
+        var email = program.deleteAccount;
+        req('delete-account', opt(email), cb);
     }
     else if(program.blockAccount) {
         var email = program.blockAccount;
@@ -156,10 +170,11 @@ exports.cmdline = function() {
         req('unblock-account', email, cb);
     }
     else if(program.login) {
+        // todo: read the password by prompt
         var email = program.login;
         var pass = aa[0];
         var authy = aa[1]; // optional
-        req('login', email, pass, authy, cb);
+        req('login', email, pass, opt(authy), cb);
     }
     else if(program.logout) {
         req('logout', cb);
@@ -186,7 +201,7 @@ exports.cmdline = function() {
     }
     else if(program.orders) {
         var market = program.orders; // optional
-        req('orders', market, cb);
+        req('orders', opt(market), cb);
     }
     else if(program.cancel) {
         var orderid = program.cancel;
@@ -205,7 +220,7 @@ exports.cmdline = function() {
     }
     else if(program.myTrades) {
         var market = program.myTrades; // optional
-        req('my-trades', market, cb);
+        req('my-trades', opt(market), cb);
     }
     else if(program.chart) {
         var market = program.chart;
