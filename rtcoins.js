@@ -172,7 +172,7 @@ exports.cmdline = function() {
     else if(program.login) {
         // todo: read the password by prompt
         var email = program.login;
-        var pass = aa[0];
+        var pass = crypto.createHash('sha256').update(aa[0]).digest('hex');
         var authy = aa[1]; // optional
         req('login', email, pass, opt(authy), cb);
     }
