@@ -61,7 +61,7 @@ function req(cmd) { // cmd, arg1, arg2, argN, cb(err, res)
             _e('invalid response status code: [%s] [%j]', res.statusCode, json);
 
         if(cmd === 'login' && json.apikey) {
-            conf.email = json.email;
+            conf.email = json.uid;
             conf.key = json.apikey;
             saveConf();
         }
@@ -109,10 +109,14 @@ exports.cmdline = function() {
         .option('-v, --verbose', 'print more info')
 
         .option('--register <email> <pass> <fname> <lname>', 'register a new user account')
+        .option('--confirm-account <email> <code>', 'confirm a newly created account')
         .option('--delete-account [email]', 'delete user account')
 
         .option('--login <email> <pass> [authy]', 'user login; writes email and api key into .config')
         .option('--logout', 'user logout; removes email and api key from .config')
+
+        .option('--block-account <email>', 'block the user account (admin)')
+        .option('--unblock-account <email>', 'unblock the user account (admin)')
 
         .option('--init-pass-reset <email>', 'initiate password reset')
         .option('--finish-pass-reset <email> <code> <new password>', 'finish password reset')
@@ -140,9 +144,6 @@ exports.cmdline = function() {
         .option('--consolidate <email> <currency>', 'initiate consolidation transfer from user wallet to currency wallet (admin)')
         .option('--simulate-deposit <email> <currency> <amount> <source-address>', 'simulate a deposit (admin)')
 
-        .option('--block-account <email>', 'block the user account (admin)')
-        .option('--unblock-account <email>', 'unblock the user account (admin)')
-
         .parse(process.argv);
 
     verbose = program.verbose;
@@ -156,6 +157,11 @@ exports.cmdline = function() {
         var lname = aa[2];
         pass = crypto.createHash('sha256').update(pass).digest('hex');
         req('register', email, pass, fname, lname, cb);
+    }
+    else if(program.confirmAccount) {
+        var email = program.confirmAccount;
+        var code = aa[0];
+        req('confirm-account', email, code, cb);
     }
     else if(program.deleteAccount) {
         var email = program.deleteAccount;
@@ -181,13 +187,13 @@ exports.cmdline = function() {
     }
     else if(program.initPassReset) {
         var email = program.initPassReset;
-        req('reset-password', email, cb);
+        req('init-pass-reset', email, cb);
     }
     else if(program.finishPassReset) {
         var email = program.finishPassReset;
         var code = aa[0];
-        var pass = aa[1];
-        req('confirm-password', email, code, pass, cb);
+        var pass = crypto.createHash('sha256').update(aa[1]).digest('hex');
+        req('finish-pass-reset', email, code, pass, cb);
     }
     else if(program.sell) {
         var market = program.sell;
