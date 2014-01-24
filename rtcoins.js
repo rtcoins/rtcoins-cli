@@ -121,28 +121,22 @@ exports.cmdline = function() {
         .option('--init-pass-reset <email>', 'initiate password reset')
         .option('--finish-pass-reset <email> <code> <new password>', 'finish password reset')
 
+        .option('--deposit-address <currency>', 'show deposit address for the given currency')
+        .option('--cron-blockchain <currency>', 'trigger cron processing for a currency blockchain (admin only; test-mode only)')
+        .option('--transfer <email-to> <currency> <amount>', 'transfer coins to another user')
+        .option('--balance [currency]', 'list balance for a currency or all currencies with non-zero balance')
+        .option('--withdraw <currency> <amount> <address>', 'initiate a withdrawal transaction')
+
         .option('--sell <market> <amount>', 'place sell order')
         .option('--buy <market> <amount>', 'place buy order')
-        .option('--orders [market]', 'list my orders for a market, or all my orders')
         .option('--cancel <order-id>', 'cancel an order')
+        .option('--orders [market]', 'list my orders for a market, or all my orders')
 
         .option('--markets', 'list all markets')
         .option('--depth <market>', 'list sell/buy orders for a merket')
         .option('--trades <market>', 'list trade history for a market')
-        .option('--my-trades [market]', 'list my trade history for a market')
-
-        .option('--chart [market]', 'list candlestick chart data for a market')
-
-        .option('--transfer <email-to> <currency-code> <amount>', 'transfer coins to another user')
-
-        .option('--balances', 'list my balances')
-        .option('--my-markets', 'list the markets i am active in')
-
-        .option('--deposit-address <currency>', 'generate a new deposit address')
-        .option('--withdraw <currency> <amount> <address>', 'initiate a withdrawal transaction')
-
-        .option('--consolidate <email> <currency>', 'initiate consolidation transfer from user wallet to currency wallet (admin)')
-        .option('--simulate-deposit <email> <currency> <amount> <source-address>', 'simulate a deposit (admin)')
+        .option('--my-trades <market>', 'list my trade history for a market')
+        .option('--chart <market>', 'list candlestick chart data for a market')
 
         .parse(process.argv);
 
@@ -195,6 +189,32 @@ exports.cmdline = function() {
         var pass = crypto.createHash('sha256').update(aa[1]).digest('hex');
         req('finish-pass-reset', email, code, pass, cb);
     }
+
+
+    else if(program.depositAddress) {
+        var currency = program.depositAddress;
+        req('deposit-address', currency, cb);
+    }
+    else if(program.cronBlockchain) {
+        var currency = program.cronBlockchain; // optional
+        req('cron-blockchain', opt(currency), cb);
+    }
+    else if(program.transfer) {
+        var emailTo = program.transfer;
+        var currency = aa[0];
+        var amount = Number(aa[1]);
+        req('transfer', emailTo, currency, amount, cb);
+    }
+    else if(program.balance) {
+        var currency = program.balance; // optional
+        req('balance', opt(currency), cb);
+    }
+    else if(program.withdraw) {
+        var currency = program.withdraw;
+        var amount = Number(aa[0]);
+        var address = aa[1];
+        req('withdraw', currency, amount, address, cb);
+    }
     else if(program.sell) {
         var market = program.sell;
         var amount = Number(aa[0]);
@@ -205,13 +225,15 @@ exports.cmdline = function() {
         var amount = Number(aa[0]);
         req('buy', market, amount, cb);
     }
-    else if(program.orders) {
-        var market = program.orders; // optional
-        req('orders', opt(market), cb);
-    }
     else if(program.cancel) {
         var orderid = program.cancel;
         req('cancel', orderid, cb);
+    }
+
+
+    else if(program.orders) {
+        var market = program.orders; // optional
+        req('orders', opt(market), cb);
     }
     else if(program.markets) {
         req('markets', cb);
@@ -225,46 +247,12 @@ exports.cmdline = function() {
         req('trades', market, cb);
     }
     else if(program.myTrades) {
-        var market = program.myTrades; // optional
-        req('my-trades', opt(market), cb);
+        var market = program.myTrades;
+        req('my-trades', market, cb);
     }
     else if(program.chart) {
         var market = program.chart;
         req('chart', market, cb);
-    }
-    else if(program.transfer) {
-        var emailTo = program.transfer;
-        var currency = aa[0];
-        var amount = Number(aa[1]);
-        req('transfer', emailTo, currency, amount, cb);
-    }
-    else if(program.balances) {
-        req('balances', cb);
-    }
-    else if(program.myMarkets) {
-        req('my-markets', cb);
-    }
-    else if(program.depositAddress) {
-        var currency = program.depositAddress;
-        req('deposit-address', currency, cb);
-    }
-    else if(program.withdraw) {
-        var currency = program.withdraw;
-        var amount = Number(aa[0]);
-        var address = aa[1];
-        req('withdraw', currency, amount, address, cb);
-    }
-    else if(program.consolidate) {
-        var email = program.consolidate;
-        var currency = aa[0];
-        req('consolidate', email, currency, cb);
-    }
-    else if(program.simulateDeposit) {
-        var email = program.simulateDeposit;
-        var currency = aa[0];
-        var amount = Number(aa[1]);
-        var sourceAddress = aa[2];
-        req('simulate-deposit', email, currency, amount, sourceAddress, cb);
     }
 };
 
