@@ -125,7 +125,7 @@ exports.cmdline = function() {
         .option('--cron-blockchain <currency>', 'trigger cron processing for a currency blockchain (admin only; test-mode only)')
         .option('--transfer <email-to> <currency> <amount>', 'transfer coins to another user')
         .option('--balance [currency]', 'list balance for a currency or all currencies with non-zero balance')
-        .option('--withdraw <currency> <amount> <address>', 'initiate a withdrawal transaction')
+        .option('--withdraw <currency> <address> <amount> [txfee]', 'initiate a withdrawal transaction; omitted txfee will be set to a default one')
 
         .option('--sell <market> <amount>', 'place sell order')
         .option('--buy <market> <amount>', 'place buy order')
@@ -173,7 +173,7 @@ exports.cmdline = function() {
         // todo: read the password by prompt
         var email = program.login;
         var pass = crypto.createHash('sha256').update(aa[0]).digest('hex');
-        var authy = aa[1]; // optional
+        var authy = aa.length > 1 ? aa[1] : null; // optional
         req('login', email, pass, opt(authy), cb);
     }
     else if(program.logout) {
@@ -211,9 +211,10 @@ exports.cmdline = function() {
     }
     else if(program.withdraw) {
         var currency = program.withdraw;
-        var amount = Number(aa[0]);
-        var address = aa[1];
-        req('withdraw', currency, amount, address, cb);
+        var address = aa[0];
+        var amount = Number(aa[1]);
+        var txfee = aa.length > 2 ? Number(aa[2]) : null; // optional
+        req('withdraw', currency, address, amount, opt(txfee), cb);
     }
     else if(program.sell) {
         var market = program.sell;
