@@ -103,6 +103,15 @@ function opt(param) {
     return param === true ? null : param;
 }
 
+function number(n) {
+    var a = Number(n);
+    if(isNaN(a))
+        _e('Not a number: ' + n);
+    if(a < 0)
+        _e('Number must be positive: ' + n);
+    return a;
+}
+
 exports.cmdline = function() {
 
     program
@@ -123,9 +132,9 @@ exports.cmdline = function() {
 
         .option('--deposit-address <currency>', 'show deposit address for the given currency')
         .option('--cron-blockchain <currency>', 'trigger cron processing for a currency blockchain (admin only; test-mode only)')
-        .option('--transfer <email-to> <currency> <amount>', 'transfer coins to another user')
+        .option('--transfer <email-to> <currency> <amount incl. transfer fee>', 'transfer coins to another user')
         .option('--balance [currency]', 'list balance for a currency or all currencies with non-zero balance')
-        .option('--withdraw <currency> <address> <amount> [txfee]', 'initiate a withdrawal transaction; omitted txfee will be set to a default one')
+        .option('--withdraw <currency> <address> <amount incl. withdrawal fee>', 'initiate a withdrawal transaction')
 
         .option('--sell <market> <amount>', 'place sell order')
         .option('--buy <market> <amount>', 'place buy order')
@@ -133,10 +142,12 @@ exports.cmdline = function() {
         .option('--orders [market]', 'list my orders for a market, or all my orders')
 
         .option('--markets', 'list all markets')
-        .option('--depth <market>', 'list sell/buy orders for a merket')
-        .option('--trades <market>', 'list trade history for a market')
         .option('--my-trades <market>', 'list my trade history for a market')
-        .option('--chart <market>', 'list candlestick chart data for a market')
+
+        .option('--depth <market>', 'list current sell/buy orders for a market')
+        .option('--trades <market>', 'list current trade history for a market')
+        .option('--chart <market> [days]', 'display 1-minute candlestick chart data')
+        .option('--feed <market> [trades|orders|all]', 'subscribe to the market data feed')
 
         .parse(process.argv);
 
@@ -202,7 +213,7 @@ exports.cmdline = function() {
     else if(program.transfer) {
         var emailTo = program.transfer;
         var currency = aa[0];
-        var amount = Number(aa[1]);
+        var amount = number(aa[1]);
         req('transfer', emailTo, currency, amount, cb);
     }
     else if(program.balance) {
@@ -212,33 +223,36 @@ exports.cmdline = function() {
     else if(program.withdraw) {
         var currency = program.withdraw;
         var address = aa[0];
-        var amount = Number(aa[1]);
-        var txfee = aa.length > 2 ? Number(aa[2]) : null; // optional
-        req('withdraw', currency, address, amount, opt(txfee), cb);
+        var amount = number(aa[1]);
+        req('withdraw', currency, address, amount, cb);
     }
     else if(program.sell) {
         var market = program.sell;
-        var amount = Number(aa[0]);
+        var amount = number(aa[0]);
         req('sell', market, amount, cb);
     }
     else if(program.buy) {
         var market = program.buy;
-        var amount = Number(aa[0]);
+        var amount = number(aa[0]);
         req('buy', market, amount, cb);
     }
     else if(program.cancel) {
         var orderid = program.cancel;
         req('cancel', orderid, cb);
     }
-
-
     else if(program.orders) {
         var market = program.orders; // optional
         req('orders', opt(market), cb);
     }
+
     else if(program.markets) {
         req('markets', cb);
     }
+    else if(program.myTrades) {
+        var market = program.myTrades;
+        req('my-trades', market, cb);
+    }
+
     else if(program.depth) {
         var market = program.depth;
         req('depth', market, cb);
@@ -247,13 +261,15 @@ exports.cmdline = function() {
         var market = program.trades;
         req('trades', market, cb);
     }
-    else if(program.myTrades) {
-        var market = program.myTrades;
-        req('my-trades', market, cb);
-    }
     else if(program.chart) {
         var market = program.chart;
+        var days = aa.length > 0 ? number(aa[0]) : null; // optional
         req('chart', market, cb);
+    }
+    else if(program.feed) {
+        var market = program.feed;
+        var type = aa.length > 0 ? aa[0] : null; // optional
+        req('feed', market, opt(type), cb);
     }
 };
 
