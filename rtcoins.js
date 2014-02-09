@@ -100,7 +100,7 @@ function saveConf() {
 }
 
 function opt(param) {
-    return param === true ? null : param;
+    return param === true || !param ? null : param;
 }
 
 function number(n) {
@@ -136,18 +136,19 @@ exports.cmdline = function() {
         .option('--balance [currency]', 'list balance for a currency or all currencies with non-zero balance')
         .option('--withdraw <currency> <address> <amount incl. withdrawal fee>', 'initiate a withdrawal transaction')
 
-        .option('--sell <market> <amount>', 'place sell order')
-        .option('--buy <market> <amount>', 'place buy order')
-        .option('--cancel <order-id>', 'cancel an order')
-        .option('--orders [market]', 'list my orders for a market, or all my orders')
-
         .option('--markets', 'list all markets')
+        .option('--sell <market> <amount> <price>', 'place sell/ask order')
+        .option('--buy <market> <amount> <price>', 'place buy/bid order')
+        .option('--cancel <order-id>', 'cancel an order')
+
+        .option('--my-markets [days]', 'list markets where i am active (defaults to 1 day)')
+        .option('--my-orders [market]', 'list my orders for a market, or all my orders')
         .option('--my-trades <market>', 'list my trade history for a market')
 
         .option('--depth <market>', 'list current sell/buy orders for a market')
         .option('--trades <market>', 'list current trade history for a market')
-        .option('--chart <market> [days]', 'display 1-minute candlestick chart data')
-        .option('--feed <market> [trades|orders|all]', 'subscribe to the market data feed')
+        .option('--chart <market> [1m|5m|15m|30m|1h|6h|12h|1d|3d|1w]', 'display candlestick chart data at the given frequency')
+        .option('--feed <market> [trade|order|all]', 'subscribe to the market data feed')
 
         .parse(process.argv);
 
@@ -226,32 +227,42 @@ exports.cmdline = function() {
         var amount = number(aa[1]);
         req('withdraw', currency, address, amount, cb);
     }
+
+
+    else if(program.markets) {
+        req('markets', cb);
+    }
     else if(program.sell) {
         var market = program.sell;
         var amount = number(aa[0]);
-        req('sell', market, amount, cb);
+        var price = number(aa[1]);
+        req('sell', market, amount, price, cb);
     }
     else if(program.buy) {
         var market = program.buy;
         var amount = number(aa[0]);
-        req('buy', market, amount, cb);
+        var price = number(aa[1]);
+        req('buy', market, amount, price, cb);
     }
     else if(program.cancel) {
         var orderid = program.cancel;
         req('cancel', orderid, cb);
     }
-    else if(program.orders) {
-        var market = program.orders; // optional
-        req('orders', opt(market), cb);
-    }
 
-    else if(program.markets) {
-        req('markets', cb);
+
+    else if(program.myMarkets) {
+        var days = program.myMarkets !== true ? number(program.myMarkets) : null; // optional
+        req('my-markets', opt(days), cb);
+    }
+    else if(program.myOrders) {
+        var market = program.myOrders; // optional
+        req('my-orders', opt(market), cb);
     }
     else if(program.myTrades) {
         var market = program.myTrades;
         req('my-trades', market, cb);
     }
+
 
     else if(program.depth) {
         var market = program.depth;
@@ -263,13 +274,17 @@ exports.cmdline = function() {
     }
     else if(program.chart) {
         var market = program.chart;
-        var days = aa.length > 0 ? number(aa[0]) : null; // optional
-        req('chart', market, cb);
+        var freq = aa.length > 0 ? aa[0] : null; // optional
+        req('chart', market, opt(days), cb);
     }
     else if(program.feed) {
         var market = program.feed;
         var type = aa.length > 0 ? aa[0] : null; // optional
         req('feed', market, opt(type), cb);
+    }
+
+    else {
+        console.log(program.help());
     }
 };
 
