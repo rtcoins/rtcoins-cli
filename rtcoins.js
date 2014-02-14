@@ -20,102 +20,11 @@ var config = path.join(home, '.rtcoins.json');
 var verbose;
 var conf;
 
-function req(cmd) { // cmd, arg1, arg2, argN, cb(err, res)
-
-    // www.rtcoins.com/api/v1/func/arg1/arg2/argN/identity/ts/sig
-
-    var args = {};
-    var url = [];
-    var aa = arguments;
-    var cb = aa[aa.length - 1];
-
-    for(var i = 0, ln = aa.length - 1; i < ln; i++) {
-        var v = aa[i];
-        args[String(i)] = v;
-        url.push(encodeURIComponent(v === null ? '\0' : v));
-    }
-
-    args[String(i++)] = conf.email;
-    url.push(encodeURIComponent(conf.email));
-
-    var sig = utilz.sign(args, conf.key, true);
-    url.push(args.ts);
-    url.push(sig);
-
-    var opts = {
-        url: baseUrl + url.join('/'),
-        json: true
-    };
-
-    if(verbose)
-        console.log('request: %s', opts.url);
-
-    request(opts, _x(cb, true, function(err, res, json) {
-
-        if(res.statusCode === 500 && json && json.error && json.error.message && !verbose) {
-            console.log(json.error.message);
-            process.exit(1);
-        }
-
-        if(res.statusCode !== 200)
-            _e('invalid response status code: [%s] [%j]', res.statusCode, json);
-
-        if(cmd === 'login' && json.apikey) {
-            conf.email = json.uid;
-            conf.key = json.apikey;
-            saveConf();
-        }
-        else if(cmd === 'logout') {
-            conf.email = anonEmail;
-            conf.key = anonApiKey;
-            saveConf();
-        }
-
-        console.log(JSON.stringify(json, null, '  '));
-        cb();
-    }));
-}
-
-function loadConf() {
-    if(fs.existsSync(config)) {
-        if(verbose)
-            console.log('loading %s', config);
-        conf = JSON.parse(fs.readFileSync(config, 'utf8'));
-    }
-    else {
-        if(verbose)
-            console.log('%s does not exist, creating one', config);
-        conf = {
-            email: anonEmail,
-            key: anonApiKey
-        };
-        saveConf();
-    }
-}
-
-function saveConf() {
-    if(verbose)
-        console.log('saving %s', config);
-    fs.writeFileSync(config, JSON.stringify(conf, null, '  '));
-}
-
-function opt(param) {
-    return param === true || !param ? null : param;
-}
-
-function number(n) {
-    var a = Number(n);
-    if(isNaN(a))
-        _e('Not a number: ' + n);
-    if(a < 0)
-        _e('Number must be positive: ' + n);
-    return a;
-}
-
-exports.cmdline = function() {
+exports.cmdline = function(argv) {
 
     program
         .option('-v, --verbose', 'print more info')
+        .option('--config <rtcoins.json>', 'specify an alternate config file')
 
         .option('--register <email> <pass> <fname> <lname>', 'register a new user account')
         .option('--confirm-account <email> <code>', 'confirm a newly created account')
@@ -150,9 +59,10 @@ exports.cmdline = function() {
         .option('--chart <market> [1m|5m|15m|30m|1h|6h|12h|1d|3d|1w]', 'display candlestick chart data at the given frequency')
         .option('--feed <market> [trade|order|all]', 'subscribe to the market data feed')
 
-        .parse(process.argv);
+        .parse(argv || process.argv);
 
     verbose = program.verbose;
+    config = program.config || config;
     loadConf();
     var aa = program.args;
 
@@ -287,6 +197,98 @@ exports.cmdline = function() {
         console.log(program.help());
     }
 };
+
+function req(cmd) { // cmd, arg1, arg2, argN, cb(err, res)
+
+    // www.rtcoins.com/api/v1/func/arg1/arg2/argN/identity/ts/sig
+
+    var args = {};
+    var url = [];
+    var aa = arguments;
+    var cb = aa[aa.length - 1];
+
+    for(var i = 0, ln = aa.length - 1; i < ln; i++) {
+        var v = aa[i];
+        args[String(i)] = v;
+        url.push(encodeURIComponent(v === null ? '\0' : v));
+    }
+
+    args[String(i++)] = conf.email;
+    url.push(encodeURIComponent(conf.email));
+
+    var sig = utilz.sign(args, conf.key, true);
+    url.push(args.ts);
+    url.push(sig);
+
+    var opts = {
+        url: baseUrl + url.join('/'),
+        json: true
+    };
+
+    if(verbose)
+        console.log('request: %s', opts.url);
+
+    request(opts, _x(cb, true, function(err, res, json) {
+
+        if(res.statusCode === 500 && json && json.error && json.error.message && !verbose) {
+            console.log(json.error.message);
+            process.exit(1);
+        }
+
+        if(res.statusCode !== 200)
+            _e('invalid response status code: [%s] [%j]', res.statusCode, json);
+
+        if(cmd === 'login' && json.apikey) {
+            conf.email = json.uid;
+            conf.key = json.apikey;
+            saveConf();
+        }
+        else if(cmd === 'logout') {
+            conf.email = anonEmail;
+            conf.key = anonApiKey;
+            saveConf();
+        }
+
+        console.log(JSON.stringify(json, null, '  '));
+        cb();
+    }));
+}
+
+function loadConf() {
+    if(fs.existsSync(config)) {
+        if(verbose)
+            console.log('loading %s', config);
+        conf = JSON.parse(fs.readFileSync(config, 'utf8'));
+    }
+    else {
+        if(verbose)
+            console.log('%s does not exist, creating one', config);
+        conf = {
+            email: anonEmail,
+            key: anonApiKey
+        };
+        saveConf();
+    }
+}
+
+function saveConf() {
+    if(verbose)
+        console.log('saving %s', config);
+    fs.writeFileSync(config, JSON.stringify(conf, null, '  '));
+}
+
+function opt(param) {
+    return param === true || !param ? null : param;
+}
+
+function number(n) {
+    var a = Number(n);
+    if(isNaN(a))
+        _e('Not a number: ' + n);
+    if(a < 0)
+        _e('Number must be positive: ' + n);
+    return a;
+}
 
 if(require.main === module)
     exports.cmdline();
