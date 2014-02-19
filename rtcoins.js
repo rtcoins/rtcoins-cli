@@ -56,7 +56,7 @@ exports.cmdline = function(argv) {
 
         .option('--depth <market>', 'list current sell/buy orders for a market')
         .option('--trades <market>', 'list current trade history for a market')
-        .option('--chart <market> [1m|5m|15m|30m|1h|6h|12h|1d|3d|1w]', 'display candlestick chart data at the given frequency')
+        .option('--chart <market> [1m|1w]', 'display candlestick chart data: 1m = 1min/24h, 15m = 15min/7d')
         .option('--feed <market> [trade|order|all]', 'subscribe to the market data feed')
 
         .parse(argv || process.argv);
@@ -185,7 +185,7 @@ exports.cmdline = function(argv) {
     else if(program.chart) {
         var market = program.chart;
         var freq = aa.length > 0 ? aa[0] : null; // optional
-        req('chart', market, opt(days), cb);
+        req('chart', market, opt(freq), cb);
     }
     else if(program.feed) {
         var market = program.feed;
