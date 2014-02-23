@@ -12,7 +12,7 @@ var fs = require('fs');
 var path = require('path');
 var cb = utilz.cb;
 var dev = process.env.NODE_ENV === 'dev';
-var baseUrl = 'http://www.rtcoins' + (dev ? '2' : '') + '.com/api/v1/';
+var baseUrl = 'http' + (!dev ? 's' : '') + '://www.rtcoins' + (dev ? '2' : '') + '.com/api/v1/';
 var anonEmail = 'anonymous@rtcoins.com';
 var anonApiKey = 'ywUiwpKjsKvsqDut1NXmgL00nBJW51wt';
 var home = process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
