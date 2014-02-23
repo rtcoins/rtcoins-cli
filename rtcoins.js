@@ -210,7 +210,7 @@ function req(cmd) { // cmd, arg1, arg2, argN, cb(err, res)
     for(var i = 0, ln = aa.length - 1; i < ln; i++) {
         var v = aa[i];
         args[String(i)] = v;
-        url.push(encodeURIComponent(v === null ? '\0' : v));
+        url.push(encodeURIComponent(v === null ? '\1' : v));
     }
 
     args[String(i++)] = conf.email;

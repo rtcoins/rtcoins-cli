@@ -1,6 +1,6 @@
 {
-  "name": "rtcoins-utils",
-  "version": "0.0.1",
+  "name": "rtcoins-cli",
+  "version": "0.0.2",
   "description": "rtcoins.com command line API client",
   "bin": {
     "rtcoins": "./bin/rtcoins"
