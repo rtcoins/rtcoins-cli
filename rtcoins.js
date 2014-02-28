@@ -24,7 +24,6 @@ exports.cmdline = function(argv) {
 
     program
         .option('-v, --verbose', 'print more info')
-        .option('--config <rtcoins.json>', 'specify an alternate config file')
 
         .option('--register <email> <pass> <fname> <lname>', 'register a new user account')
         .option('--confirm-account <email> <code>', 'confirm a newly created account')
@@ -58,6 +57,8 @@ exports.cmdline = function(argv) {
         .option('--trades <market>', 'list current trade history for a market')
         .option('--chart <market> [1m|1w]', 'display candlestick chart data: 1m = 1min/24h, 15m = 15min/7d')
         .option('--feed <market> [trade|order|all]', 'subscribe to the market data feed')
+
+        .option('--config <default: ~/.rtcoins.json>', 'specify an alternate config file; use with other commands')
 
         .parse(argv || process.argv);
 
